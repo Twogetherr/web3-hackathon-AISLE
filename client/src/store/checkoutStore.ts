@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { CartItemSnapshot } from "../types/cart";
 import type { OrderConfirmation } from "../types/checkout";
+import { getStoredWalletAddress, setStoredWalletAddress } from "../lib/session";
 
 interface CheckoutStoreState {
   isOpen: boolean;
@@ -23,7 +24,7 @@ interface CheckoutStoreState {
 export const useCheckoutStore = create<CheckoutStoreState>((set) => ({
   isOpen: false,
   items: [],
-  walletAddress: "",
+  walletAddress: getStoredWalletAddress(),
   lastOrder: null,
   errorMessage: null,
   isSubmitting: false,
@@ -40,7 +41,10 @@ export const useCheckoutStore = create<CheckoutStoreState>((set) => ({
       errorMessage: null,
       isSubmitting: false
     }),
-  setWalletAddress: (walletAddress) => set({ walletAddress }),
+  setWalletAddress: (walletAddress) => {
+    setStoredWalletAddress(walletAddress);
+    set({ walletAddress });
+  },
   setSubmitting: (isSubmitting) => set({ isSubmitting }),
   setLastOrder: (lastOrder) => set({ lastOrder }),
   setErrorMessage: (errorMessage) => set({ errorMessage })

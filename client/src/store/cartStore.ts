@@ -5,7 +5,9 @@ interface CartStoreState {
   items: CartItemSnapshot[];
   isCartOpen: boolean;
   addItem: (item: CartItemSnapshot) => void;
+  closeCart: () => void;
   clearCart: () => void;
+  openCart: () => void;
 }
 
 /**
@@ -34,8 +36,16 @@ export const useCartStore = create<CartStoreState>((set) => ({
         )
       };
     }),
+  closeCart: () =>
+    set({
+      isCartOpen: false
+    }),
   clearCart: () =>
     set({
       items: []
+    }),
+  openCart: () =>
+    set({
+      isCartOpen: true
     })
 }));

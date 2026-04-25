@@ -1,6 +1,6 @@
 import { postCheckout } from "../lib/apiClient";
 import { getOrCreateSessionId } from "../lib/session";
-import { submitUnsignedTransaction } from "../lib/wallet";
+import { connectBrowserWallet, submitUnsignedTransaction } from "../lib/wallet";
 import { useCartStore } from "../store/cartStore";
 import { useCheckoutStore } from "../store/checkoutStore";
 
@@ -31,8 +31,17 @@ export function CheckoutModal(): JSX.Element | null {
   }
 
   const totalUsdc = items.reduce((sum, item) => sum + item.priceUsdc * item.quantity, 0);
+  const truncatedTxHash =
+    lastOrder?.txHash !== undefined && lastOrder.txHash.length > 10
+      ? `${lastOrder.txHash.slice(0, 6)}...${lastOrder.txHash.slice(-4)}`
+      : lastOrder?.txHash ?? "";
 
   async function handleConfirmPayment(): Promise<void> {
+    if (walletAddress.trim().length === 0) {
+      setErrorMessage("Connect a wallet before checkout.");
+      return;
+    }
+
     setSubmitting(true);
     setErrorMessage(null);
 
@@ -66,6 +75,16 @@ export function CheckoutModal(): JSX.Element | null {
     }
   }
 
+  async function handleConnectWallet(): Promise<void> {
+    try {
+      const nextWalletAddress = await connectBrowserWallet();
+      setWalletAddress(nextWalletAddress);
+      setErrorMessage(null);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Wallet connection failed.");
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-4 pt-12">
       <section className="w-full max-w-2xl rounded-lg border border-[#2A2A2A] bg-[#181818] p-6 shadow-2xl">
@@ -76,6 +95,7 @@ export function CheckoutModal(): JSX.Element | null {
             </p>
             <h2 className="text-3xl font-semibold">Payment confirmed</h2>
             <p className="text-sm text-[#A0A0A0]">{lastOrder.orderId}</p>
+            <p className="text-sm text-[#A0A0A0]">{truncatedTxHash}</p>
             <a
               className="inline-flex text-sm font-medium text-[#00C853]"
               href={lastOrder.explorerUrl}
@@ -90,6 +110,33 @@ export function CheckoutModal(): JSX.Element | null {
               type="button"
             >
               Continue shopping
+            </button>
+          </div>
+        ) : lastOrder?.status === "pending" ? (
+          <div className="space-y-4">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#F5B942]">
+              Pending
+            </p>
+            <h2 className="text-3xl font-semibold">Payment pending</h2>
+            <p className="text-sm text-[#A0A0A0]">
+              Your transaction was submitted, but Avalanche has not confirmed it yet.
+            </p>
+            <p className="text-sm text-[#A0A0A0]">{lastOrder.orderId}</p>
+            <p className="text-sm text-[#A0A0A0]">{truncatedTxHash}</p>
+            <a
+              className="inline-flex text-sm font-medium text-[#F5B942]"
+              href={lastOrder.explorerUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Track transaction
+            </a>
+            <button
+              className="inline-flex h-11 items-center justify-center rounded-md border border-[#2A2A2A] px-5 text-sm font-semibold text-white"
+              onClick={close}
+              type="button"
+            >
+              Close
             </button>
           </div>
         ) : (
@@ -122,15 +169,30 @@ export function CheckoutModal(): JSX.Element | null {
             </div>
 
             <div className="rounded-md border border-[#2A2A2A] px-4 py-3">
-              <label className="mb-2 block text-sm font-medium" htmlFor="wallet-address">
-                Wallet address
-              </label>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <label className="block text-sm font-medium" htmlFor="wallet-address">
+                  Wallet address
+                </label>
+                <button
+                  className="text-sm font-medium text-[#00C853]"
+                  onClick={() => {
+                    void handleConnectWallet();
+                  }}
+                  type="button"
+                >
+                  Connect MetaMask
+                </button>
+              </div>
               <input
                 className="h-11 w-full rounded-md border border-[#2A2A2A] bg-[#101010] px-3 text-sm text-white outline-none"
                 id="wallet-address"
                 onChange={(event) => setWalletAddress(event.target.value)}
                 value={walletAddress}
               />
+            </div>
+
+            <div className="rounded-md border border-[#2A2A2A] px-4 py-3 text-sm text-[#A0A0A0]">
+              Paying from <span className="font-medium text-white">{walletAddress || "Not connected"}</span>
             </div>
 
             <div className="flex items-center justify-between">
@@ -146,7 +208,7 @@ export function CheckoutModal(): JSX.Element | null {
 
             <button
               className="inline-flex h-11 w-full items-center justify-center rounded-md bg-[#00C853] px-5 text-sm font-semibold text-[#08110A] disabled:cursor-not-allowed disabled:bg-[#235A34]"
-              disabled={isSubmitting}
+              disabled={isSubmitting || walletAddress.trim().length === 0}
               onClick={() => {
                 void handleConfirmPayment();
               }}

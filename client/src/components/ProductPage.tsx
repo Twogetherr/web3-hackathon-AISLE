@@ -22,6 +22,7 @@ export function ProductPage(): JSX.Element {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [imageSrc, setImageSrc] = useState<string>("/placeholder-product.svg");
   const [quantity, setQuantity] = useState(1);
+  const [isAdded, setIsAdded] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -53,6 +54,20 @@ export function ProductPage(): JSX.Element {
     };
   }, [id]);
 
+  useEffect(() => {
+    if (!isAdded) {
+      return () => undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsAdded(false);
+    }, 2000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isAdded]);
+
   async function handleAddToCart(): Promise<void> {
     if (product === null) {
       return;
@@ -72,6 +87,7 @@ export function ProductPage(): JSX.Element {
         productId: product.id,
         quantity
       });
+      setIsAdded(true);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Unable to add item to cart.");
     }
@@ -149,6 +165,24 @@ export function ProductPage(): JSX.Element {
               {product.brand} · {product.providerName}
             </p>
             <h1 className="mt-2 text-4xl font-semibold">{product.name}</h1>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[#A0A0A0]">
+              {product.rating !== null ? (
+                <p>
+                  {product.rating.toFixed(1)} ({product.reviewCount} reviews)
+                </p>
+              ) : (
+                <p>Unrated</p>
+              )}
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-medium ${
+                  isUnavailable
+                    ? "border border-[#5A2323] bg-[#2B1414] text-[#FF7474]"
+                    : "border border-[#214C2D] bg-[#112418] text-[#8CE6A9]"
+                }`}
+              >
+                {isUnavailable ? "Out of Stock" : "In Stock"}
+              </span>
+            </div>
           </div>
 
           <p className="text-3xl font-semibold">${product.priceUsdc.toFixed(2)}</p>
@@ -173,10 +207,16 @@ export function ProductPage(): JSX.Element {
             <input
               className="h-11 w-24 rounded-md border border-[#2A2A2A] bg-[#101010] px-3 text-sm text-white outline-none"
               id="product-quantity"
+              max={99}
               min={1}
               onChange={(event) => {
                 const parsedValue = Number(event.target.value);
-                setQuantity(Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : 1);
+                if (!Number.isFinite(parsedValue)) {
+                  setQuantity(1);
+                  return;
+                }
+
+                setQuantity(Math.min(99, Math.max(1, Math.floor(parsedValue))));
               }}
               type="number"
               value={quantity}
@@ -192,7 +232,7 @@ export function ProductPage(): JSX.Element {
               }}
               type="button"
             >
-              Add to Cart
+              {isAdded ? "Added ✓" : "Add to Cart"}
             </button>
             <button
               className="h-11 rounded-md bg-[#00C853] text-sm font-semibold text-[#08110A] disabled:cursor-not-allowed disabled:bg-[#235A34]"

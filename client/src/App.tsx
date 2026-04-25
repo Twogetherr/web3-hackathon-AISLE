@@ -1,3 +1,4 @@
+import { CartSidebar } from "./components/CartSidebar";
 import { CheckoutModal } from "./components/CheckoutModal";
 import { Header } from "./components/Header";
 import { HomePage } from "./components/HomePage";
@@ -20,6 +21,7 @@ export function App(): JSX.Element {
           <Route element={<ProductPage />} path="/products/:id" />
         </Routes>
       </div>
+      <CartSidebar />
       <CheckoutModal />
     </main>
   );

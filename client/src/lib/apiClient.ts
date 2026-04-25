@@ -40,14 +40,19 @@ export async function fetchRecommendations(prompt: string): Promise<RecommendRes
 /**
  * Calls the grocery-list endpoint.
  *
- * @param prompt The shopper prompt.
+ * @param payload The grocery-list request payload.
  * @returns The grocery-list result payload.
  * @throws {Error} Throws when the API returns a structured error.
  */
-export async function fetchGroceryList(prompt: string): Promise<GroceryListResponseData> {
+export async function fetchGroceryList(payload: {
+  prompt: string;
+  budget?: number;
+  excludeItems?: string[];
+  remainingBudget?: number;
+}): Promise<GroceryListResponseData> {
   return requestJson<GroceryListResponseData>("/api/agent/grocery-list", {
     method: "POST",
-    body: JSON.stringify({ prompt, budget: 30 })
+    body: JSON.stringify(payload)
   });
 }
 
