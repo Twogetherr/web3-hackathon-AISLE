@@ -1,0 +1,59 @@
+{
+  "name": "@aisle/server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "tsx ../prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "6.6.0",
+    "cors": "2.8.5",
+    "dotenv": "16.4.7",
+    "ethers": "6.13.5",
+    "express": "4.21.2",
+    "express-rate-limit": "7.5.0",
+    "openai": "4.91.1",
+    "uuid": "11.1.0",
+    "zod": "3.24.2"
+  },
+  "devDependencies": {
+    "@types/cors": "2.8.17",
+    "@types/express": "5.0.1",
+    "@types/node": "22.13.14",
+    "@types/supertest": "6.0.3",
+    "prisma": "6.6.0",
+    "supertest": "7.1.0",
+    "tsx": "4.19.3",
+    "typescript": "5.8.3",
+    "vitest": "2.1.8"
+  },
+  "dependencyComments": {
+    "@prisma/client": "Typed database client used by repositories and services.",
+    "cors": "Enables the CORS-open agent and browser endpoints required by the spec.",
+    "dotenv": "Loads environment variables for local development and test execution.",
+    "ethers": "Builds, signs, and monitors USDC transactions on Avalanche C-Chain.",
+    "express": "Provides the HTTP server and routing layer for AISLE APIs.",
+    "express-rate-limit": "Applies the shared request throttling for agent endpoints.",
+    "openai": "Calls the OpenAI API for recommendation and grocery-list generation.",
+    "uuid": "Generates stable request and entity identifiers.",
+    "zod": "Validates API inputs and environment configuration with typed schemas.",
+    "@types/cors": "TypeScript types for cors middleware.",
+    "@types/express": "TypeScript types for Express request and response objects.",
+    "@types/node": "TypeScript types for the Node.js runtime.",
+    "@types/supertest": "TypeScript types for HTTP integration testing helpers.",
+    "prisma": "Provides schema, migration, and seed tooling for PostgreSQL.",
+    "supertest": "Executes HTTP integration tests against the Express app.",
+    "tsx": "Runs TypeScript files directly in development and script workflows.",
+    "typescript": "Compiles and type-checks the backend codebase.",
+    "vitest": "Runs unit and integration tests with coverage reporting."
+  }
+}

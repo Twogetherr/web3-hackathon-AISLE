@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  failed
+}
+
+model Provider {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String
+  description String
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String
+  brand       String
+  category    String
+  description String
+  priceUsdc   Decimal   @db.Decimal(10, 2)
+  imageUrl    String
+  inStock     Boolean
+  stockQty    Int
+  rating      Decimal?  @db.Decimal(2, 1)
+  reviewCount Int
+  tags        String[]
+  providerId  String    @db.Uuid
+  provider    Provider  @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([name])
+  @@index([category])
+  @@index([priceUsdc])
+  @@index([tags], type: Gin)
+}
+
+model Cart {
+  id        String     @id
+  items      CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  orders    Order[]
+}
+
+model CartItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  cartId    String
+  productId String   @db.Uuid
+  quantity  Int
+  priceUsdc Decimal  @db.Decimal(10, 2)
+  name      String
+  imageUrl  String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cartId])
+  @@index([productId])
+}
+
+model Order {
+  id            String      @id @default(uuid()) @db.Uuid
+  cartId         String
+  walletAddress String
+  txHash         String?
+  amountUsdc     Decimal     @db.Decimal(10, 2)
+  status         OrderStatus
+  confirmedAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  cart           Cart        @relation(fields: [cartId], references: [id], onDelete: Restrict)
+
+  @@index([cartId])
+  @@index([status])
+  @@index([txHash])
+}

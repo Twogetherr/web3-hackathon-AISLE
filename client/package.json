@@ -1,0 +1,58 @@
+{
+  "name": "@aisle/client",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json"
+  },
+  "dependencies": {
+    "ethers": "6.13.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "6.30.0",
+    "zustand": "5.0.3"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.3.0",
+    "@testing-library/user-event": "14.6.1",
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "@vitejs/plugin-react": "4.3.4",
+    "autoprefixer": "10.4.20",
+    "jsdom": "25.0.1",
+    "msw": "2.7.0",
+    "postcss": "8.5.3",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.8.3",
+    "vite": "5.4.14",
+    "vitest": "2.1.8"
+  },
+  "dependencyComments": {
+    "ethers": "Builds and submits the client-side USDC transaction through the connected wallet.",
+    "react": "Builds the human shopping interface.",
+    "react-dom": "Mounts the React application in the browser.",
+    "react-router-dom": "Provides product-page and search-result routing.",
+    "zustand": "Manages cart, search, and checkout client state.",
+    "@testing-library/jest-dom": "Adds DOM-specific assertions for frontend tests.",
+    "@testing-library/react": "Renders components for frontend test coverage.",
+    "@testing-library/user-event": "Simulates realistic user interactions in UI tests.",
+    "@types/react": "TypeScript types for React.",
+    "@types/react-dom": "TypeScript types for React DOM.",
+    "@vitejs/plugin-react": "Enables React support in the Vite build.",
+    "autoprefixer": "Adds vendor prefixes to generated CSS.",
+    "jsdom": "Provides the browser-like DOM environment for Vitest.",
+    "msw": "Mocks API calls in frontend tests.",
+    "postcss": "Processes Tailwind CSS during builds.",
+    "tailwindcss": "Supplies the utility-first styling system required by the spec.",
+    "typescript": "Compiles and type-checks the frontend codebase.",
+    "vite": "Runs the frontend dev server and production builds.",
+    "vitest": "Runs frontend unit and component tests with coverage."
+  }
+}

@@ -1,0 +1,15 @@
+process.env.OPENAI_API_KEY = "sk-fake-openai-key-1234567890abcdef";
+process.env.DATABASE_URL = "postgresql://aisle_user:aisle_pass@localhost:5432/aisle_db";
+process.env.AVALANCHE_RPC_URL = "https://api.avax.network/ext/bc/C/rpc";
+process.env.AVALANCHE_FUJI_RPC_URL = "https://api.avax-test.network/ext/bc/C/rpc";
+process.env.AVALANCHE_CHAIN_ID = "43114";
+process.env.AVALANCHE_FUJI_CHAIN_ID = "43113";
+process.env.USDC_CONTRACT_ADDRESS = "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E";
+process.env.USDC_FUJI_CONTRACT_ADDRESS = "0x5425890298aed601595a70AB815c96711a31Bc65";
+process.env.MERCHANT_WALLET_ADDRESS = "0xFakeM3rchantWall3tAddr3ss0000000000000001";
+process.env.MERCHANT_WALLET_PRIVATE_KEY = "0xfake_private_key_never_commit_this_000000";
+process.env.PORT = "3001";
+process.env.VITE_API_BASE_URL = "http://localhost:3001";
+process.env.NODE_ENV = "test";
+process.env.RATE_LIMIT_WINDOW_MS = "60000";
+process.env.RATE_LIMIT_MAX_REQUESTS = "10";
