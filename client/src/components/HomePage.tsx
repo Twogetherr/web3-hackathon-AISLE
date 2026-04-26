@@ -68,6 +68,7 @@ export function HomePage(): JSX.Element {
     setResultHistoryIndex(0);
     navigate(location.pathname, { replace: true, state: {} });
   }, [location.key, location.pathname, navigate]);
+
   const groceryBudget =
     groceryList?.budgetRemaining === null || groceryList === null
       ? null
@@ -86,10 +87,7 @@ export function HomePage(): JSX.Element {
 
     try {
       if (isListModePrompt(prompt)) {
-        const nextGroceryList = await fetchGroceryList({
-          prompt,
-          budget: 30
-        });
+        const nextGroceryList = await fetchGroceryList({ prompt, budget: 30 });
         setGroceryList(nextGroceryList);
         setListPrompt(prompt);
         setSingleResult(null);
@@ -117,7 +115,6 @@ export function HomePage(): JSX.Element {
             nextHistory.push(nextRecommendations);
             return nextHistory;
           }
-
           return [nextRecommendations];
         });
         setResultHistoryIndex(options?.isRefresh === true ? resultHistoryIndex + 1 : 0);
@@ -144,10 +141,7 @@ export function HomePage(): JSX.Element {
   }
 
   function handleShowPreviousRecommendations(): void {
-    if (resultHistoryIndex <= 0) {
-      return;
-    }
-
+    if (resultHistoryIndex <= 0) return;
     const previousIndex = resultHistoryIndex - 1;
     setSingleResult(resultHistory[previousIndex] ?? null);
     setResultHistoryIndex(previousIndex);
@@ -198,20 +192,14 @@ export function HomePage(): JSX.Element {
     updater: (items: GroceryListResponseData["items"]) => GroceryListResponseData["items"]
   ): void {
     setGroceryList((currentGroceryList) => {
-      if (currentGroceryList === null) {
-        return null;
-      }
+      if (currentGroceryList === null) return null;
 
       const nextItems = updater(currentGroceryList.items);
-      const nextTotal = Number(
-        nextItems.reduce((sum, item) => sum + item.lineTotal, 0).toFixed(2)
-      );
+      const nextTotal = Number(nextItems.reduce((sum, item) => sum + item.lineTotal, 0).toFixed(2));
       const groceryListBudget =
         currentGroceryList.budgetRemaining === null
           ? null
-          : Number(
-              (currentGroceryList.totalUsdc + currentGroceryList.budgetRemaining).toFixed(2)
-            );
+          : Number((currentGroceryList.totalUsdc + currentGroceryList.budgetRemaining).toFixed(2));
 
       return {
         ...currentGroceryList,
@@ -232,9 +220,7 @@ export function HomePage(): JSX.Element {
   function handleUpdateGroceryQuantity(index: number, nextQuantityValue: number): void {
     updateGroceryListItems((items) =>
       items.map((item, itemIndex) => {
-        if (itemIndex !== index) {
-          return item;
-        }
+        if (itemIndex !== index) return item;
 
         const nextQuantity = Math.min(99, Math.max(1, Math.floor(nextQuantityValue)));
         const lineTotal =
@@ -242,19 +228,13 @@ export function HomePage(): JSX.Element {
             ? 0
             : Number((item.product.priceUsdc * nextQuantity).toFixed(2));
 
-        return {
-          ...item,
-          quantity: nextQuantity,
-          lineTotal
-        };
+        return { ...item, quantity: nextQuantity, lineTotal };
       })
     );
   }
 
   async function handleAddAllToCart(): Promise<void> {
-    if (groceryList === null) {
-      return;
-    }
+    if (groceryList === null) return;
 
     const eligibleItems = groceryList.items.filter(
       (item): item is GroceryListResponseData["items"][number] & { product: Product } =>
@@ -285,23 +265,21 @@ export function HomePage(): JSX.Element {
   }
 
   function handleBuyAllNow(): void {
-    if (groceryList === null) {
-      return;
-    }
+    if (groceryList === null) return;
 
     clearCart();
     const checkoutLines = groceryList.items
-        .filter(
-          (item): item is GroceryListResponseData["items"][number] & { product: Product } =>
-            item.product !== null && item.product.inStock
-        )
-        .map((item) => ({
-          productId: item.product.id,
-          quantity: item.quantity,
-          priceUsdc: item.product.priceUsdc,
-          name: item.product.name,
-          imageUrl: item.product.imageUrl
-        }));
+      .filter(
+        (item): item is GroceryListResponseData["items"][number] & { product: Product } =>
+          item.product !== null && item.product.inStock
+      )
+      .map((item) => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+        priceUsdc: item.product.priceUsdc,
+        name: item.product.name,
+        imageUrl: item.product.imageUrl
+      }));
 
     for (const line of checkoutLines) {
       addItem(line);
@@ -311,9 +289,7 @@ export function HomePage(): JSX.Element {
   }
 
   async function handleFindItemsForRemainingBudget(): Promise<void> {
-    if (groceryList === null || groceryList.budgetRemaining === null || groceryList.budgetRemaining <= 0) {
-      return;
-    }
+    if (groceryList === null || groceryList.budgetRemaining === null || groceryList.budgetRemaining <= 0) return;
 
     setIsLoading(true);
     setErrorMessage(null);
@@ -338,37 +314,38 @@ export function HomePage(): JSX.Element {
 
   return (
     <section className="space-y-8 py-8">
-      <div className="rounded-lg border border-[#2A2A2A] bg-[#181818] p-6">
-        <label className="mb-3 block text-sm font-medium text-white" htmlFor="shopping-prompt">
-          Shopping prompt
+      {/* Search panel */}
+      <div className="rounded-xl border border-[#771111]/20 bg-[#fae7cc] p-6 shadow-sm">
+        <label className="mb-3 block text-xs font-bold uppercase tracking-[0.3em] text-[#771111]/60" htmlFor="shopping-prompt">
+          What are you looking for?
         </label>
         <div className="flex flex-col gap-3 md:flex-row">
           <input
-            className="h-12 flex-1 rounded-md border border-[#2A2A2A] bg-[#101010] px-4 text-sm text-white outline-none"
+            className="h-12 flex-1 rounded-lg border-2 border-[#771111]/20 bg-[#fae7cc] px-4 text-sm text-[#771111] outline-none placeholder:text-[#771111]/30 focus:border-[#771111]/50 focus:ring-0"
             id="shopping-prompt"
             onChange={(event) => setPrompt(event.target.value)}
             onKeyDown={(event) => handlePromptKeyDown(event.key)}
+            placeholder="e.g. ingredients for pasta carbonara…"
             value={prompt}
           />
           <button
-            className="inline-flex h-12 items-center justify-center rounded-md bg-[#00C853] px-6 text-sm font-semibold text-[#08110A] disabled:cursor-not-allowed disabled:bg-[#235A34]"
+            className="inline-flex h-12 items-center justify-center rounded-lg bg-[#771111] px-8 text-sm font-bold uppercase tracking-widest text-[#fae7cc] transition hover:bg-[#5a0d0d] disabled:cursor-not-allowed disabled:bg-[#771111]/40"
             disabled={isLoading}
-            onClick={() => {
-              void handleSubmit();
-            }}
+            onClick={() => { void handleSubmit(); }}
             type="button"
           >
-            {isLoading ? "Searching..." : "Search"}
+            {isLoading ? "Searching…" : "Search"}
           </button>
         </div>
+
         {prompt.trim().length > 0 ? (
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="mt-5 grid gap-4 border-t border-[#771111]/10 pt-5 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-white" htmlFor="budget-range">
+              <label className="block text-xs font-bold uppercase tracking-[0.25em] text-[#771111]/60" htmlFor="budget-range">
                 Budget range
               </label>
               <select
-                className="h-11 w-full rounded-md border border-[#2A2A2A] bg-[#101010] px-3 text-sm text-white outline-none"
+                className="h-10 w-full rounded-lg border border-[#771111]/20 bg-[#fae7cc] px-3 text-sm text-[#771111] outline-none focus:border-[#771111]/50"
                 id="budget-range"
                 onChange={(event) =>
                   setPriceBandId(event.target.value as (typeof PRICE_BANDS)[number]["id"] | "")
@@ -384,13 +361,13 @@ export function HomePage(): JSX.Element {
               </select>
             </div>
             <fieldset>
-              <legend className="mb-2 text-sm font-medium text-white">Preferred provider</legend>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <legend className="mb-2 text-xs font-bold uppercase tracking-[0.25em] text-[#771111]/60">Preferred provider</legend>
+              <div className="grid grid-cols-2 gap-2">
                 {PROVIDER_OPTIONS.map((providerName) => (
-                  <label className="flex items-center gap-2 text-sm text-[#D9D9D9]" key={providerName}>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-[#771111]" key={providerName}>
                     <input
                       checked={selectedProviders.includes(providerName)}
-                      className="h-4 w-4 rounded border border-[#2A2A2A] bg-[#101010] text-[#00C853]"
+                      className="h-4 w-4 rounded border border-[#771111]/30 accent-[#771111]"
                       onChange={() => handleToggleProvider(providerName)}
                       type="checkbox"
                     />
@@ -401,32 +378,34 @@ export function HomePage(): JSX.Element {
             </fieldset>
           </div>
         ) : null}
+
         {errorMessage !== null ? (
-          <p className="mt-3 text-sm text-[#FF7474]">{errorMessage}</p>
+          <p className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {errorMessage}
+          </p>
         ) : null}
       </div>
 
+      {/* Single product results */}
       {singleResult !== null ? (
         <div className="space-y-4">
-          <div className="flex items-center justify-between rounded-lg border border-[#2A2A2A] bg-[#181818] px-4 py-3">
-            <p className="text-sm text-[#A0A0A0]">{singleResult.reasoning}</p>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#771111]/20 bg-[#fae7cc] px-4 py-3">
+            <p className="text-sm italic text-[#771111]/60">{singleResult.reasoning}</p>
             <div className="flex items-center gap-2">
               <button
-                className="inline-flex h-10 items-center justify-center rounded-md border border-[#2A2A2A] px-4 text-sm font-medium text-white"
-                onClick={() => {
-                  void handleSubmit({ isRefresh: true });
-                }}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-[#771111]/30 px-4 text-xs font-bold uppercase tracking-widest text-[#771111] transition hover:bg-[#771111]/10"
+                onClick={() => { void handleSubmit({ isRefresh: true }); }}
                 type="button"
               >
-                Refresh results
+                Refresh
               </button>
               {resultHistoryIndex > 0 ? (
                 <button
-                  className="inline-flex h-10 items-center justify-center rounded-md border border-[#2A2A2A] px-4 text-sm font-medium text-white"
+                  className="inline-flex h-9 items-center justify-center rounded-lg border border-[#771111]/30 px-4 text-xs font-bold uppercase tracking-widest text-[#771111] transition hover:bg-[#771111]/10"
                   onClick={handleShowPreviousRecommendations}
                   type="button"
                 >
-                  Back to previous results
+                  ← Previous
                 </button>
               ) : null}
             </div>
@@ -436,15 +415,11 @@ export function HomePage(): JSX.Element {
             {singleResult.recommendations.map((product) => (
               <ProductCard
                 key={product.id}
-                onAddToCart={(nextProduct) => {
-                  void handleAddToCart(nextProduct);
-                }}
+                onAddToCart={(nextProduct) => { void handleAddToCart(nextProduct); }}
                 onBuyNow={handleBuyNow}
                 onOpenProduct={(nextProduct) =>
                   navigate(`/products/${nextProduct.id}`, {
-                    state: {
-                      searchSnapshot: { prompt, singleResult }
-                    }
+                    state: { searchSnapshot: { prompt, singleResult } }
                   })
                 }
                 product={product}
@@ -454,18 +429,19 @@ export function HomePage(): JSX.Element {
         </div>
       ) : null}
 
+      {/* Grocery list results */}
       {groceryList !== null ? (
-        <section className="rounded-lg border border-[#2A2A2A] bg-[#181818] p-6">
+        <section className="rounded-xl border border-[#771111]/20 bg-[#fae7cc] p-6 shadow-sm">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold">{groceryList.title}</h2>
-            <p className="text-2xl font-semibold">${groceryList.totalUsdc.toFixed(2)}</p>
+            <h2 className="font-serif text-2xl font-bold text-[#771111]">{groceryList.title}</h2>
+            <p className="font-serif text-2xl font-bold text-[#771111]">${groceryList.totalUsdc.toFixed(2)}</p>
           </div>
 
           {groceryBudget !== null ? (
-            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-[#A0A0A0]">
-              <p>Budget: ${groceryBudget.toFixed(2)}</p>
-              <p>Spent: ${groceryList.totalUsdc.toFixed(2)}</p>
-              <p>Left: ${groceryList.budgetRemaining?.toFixed(2) ?? "0.00"}</p>
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-[#771111]/60 border-t border-[#771111]/10 pt-3">
+              <p>Budget: <span className="font-semibold text-[#771111]">${groceryBudget.toFixed(2)}</span></p>
+              <p>Spent: <span className="font-semibold text-[#771111]">${groceryList.totalUsdc.toFixed(2)}</span></p>
+              <p>Left: <span className="font-semibold text-[#771111]">${groceryList.budgetRemaining?.toFixed(2) ?? "0.00"}</span></p>
             </div>
           ) : null}
 
@@ -475,101 +451,90 @@ export function HomePage(): JSX.Element {
 
               return (
                 <div
-                  className="grid gap-4 rounded-md border border-[#2A2A2A] px-4 py-3 md:grid-cols-[88px_1fr_auto]"
+                  className="grid gap-4 rounded-lg border border-[#771111]/15 bg-[#fae7cc]/70 px-4 py-3 md:grid-cols-[72px_1fr_auto]"
                   key={`${item.ingredient}-${index}`}
                 >
-                <button
-                  className="h-[88px] w-[88px] overflow-hidden rounded-md bg-[#2A2A2A]"
-                  disabled={matchedProduct === null}
-                  onClick={() => {
-                    if (matchedProduct !== null) {
-                      navigate(`/products/${matchedProduct.id}`);
-                    }
-                  }}
-                  type="button"
-                >
-                  <img
-                    alt={matchedProduct?.name ?? item.ingredient}
-                    className="h-full w-full object-cover"
-                    onError={(event) => {
-                      event.currentTarget.src = PRODUCT_PLACEHOLDER_URL;
-                    }}
-                    src={matchedProduct?.imageUrl ?? PRODUCT_PLACEHOLDER_URL}
-                  />
-                </button>
-
-                <div className="space-y-1">
-                  <p className="font-medium">{item.ingredient}</p>
-                  {matchedProduct !== null ? (
-                    <button
-                      className="text-left text-sm text-[#A0A0A0]"
-                      onClick={() => navigate(`/products/${matchedProduct.id}`)}
-                      type="button"
-                    >
-                      {matchedProduct.name}
-                    </button>
-                  ) : (
-                    <p className="text-sm text-[#A0A0A0]">No match found</p>
-                  )}
-                  {matchedProduct !== null ? (
-                    <p className="text-xs text-[#6F6F6F]">
-                      {matchedProduct.brand} - {matchedProduct.providerName}
-                    </p>
-                  ) : null}
-                  {matchedProduct?.inStock === false ? (
-                    <p className="text-xs font-medium text-[#FF7474]">Out of stock</p>
-                  ) : null}
-                </div>
-
-                <div className="flex flex-wrap items-center justify-end gap-4">
-                  <div>
-                    <label
-                      className="mb-1 block text-xs uppercase tracking-[0.18em] text-[#6F6F6F]"
-                      htmlFor={`grocery-quantity-${index}`}
-                    >
-                      Qty
-                    </label>
-                    <input
-                      aria-label={`Quantity for ${item.ingredient}`}
-                      className="h-10 w-20 rounded-md border border-[#2A2A2A] bg-[#101010] px-3 text-sm text-white outline-none"
-                      id={`grocery-quantity-${index}`}
-                      max={99}
-                      min={1}
-                      onChange={(event) => {
-                        const parsedValue = Number(event.target.value);
-                        handleUpdateGroceryQuantity(
-                          index,
-                          Number.isFinite(parsedValue) ? parsedValue : 1
-                        );
-                      }}
-                      type="number"
-                      value={item.quantity}
-                    />
-                  </div>
-                  <p className="min-w-16 text-right font-semibold">${item.lineTotal.toFixed(2)}</p>
                   <button
-                    aria-label="Remove item"
-                    className="text-sm text-[#A0A0A0]"
-                    onClick={() => handleRemoveGroceryItem(index)}
+                    className="h-[72px] w-[72px] overflow-hidden rounded-lg bg-[#771111]/10"
+                    disabled={matchedProduct === null}
+                    onClick={() => {
+                      if (matchedProduct !== null) navigate(`/products/${matchedProduct.id}`);
+                    }}
                     type="button"
                   >
-                    Remove
+                    <img
+                      alt={matchedProduct?.name ?? item.ingredient}
+                      className="h-full w-full object-cover"
+                      onError={(event) => { event.currentTarget.src = PRODUCT_PLACEHOLDER_URL; }}
+                      src={matchedProduct?.imageUrl ?? PRODUCT_PLACEHOLDER_URL}
+                    />
                   </button>
-                </div>
+
+                  <div className="space-y-0.5">
+                    <p className="font-semibold text-[#771111]">{item.ingredient}</p>
+                    {matchedProduct !== null ? (
+                      <button
+                        className="text-left text-sm text-[#771111]/60 hover:text-[#771111]"
+                        onClick={() => navigate(`/products/${matchedProduct.id}`)}
+                        type="button"
+                      >
+                        {matchedProduct.name}
+                      </button>
+                    ) : (
+                      <p className="text-sm text-[#771111]/40">No match found</p>
+                    )}
+                    {matchedProduct !== null ? (
+                      <p className="text-xs text-[#771111]/40">
+                        {matchedProduct.brand} — {matchedProduct.providerName}
+                      </p>
+                    ) : null}
+                    {matchedProduct?.inStock === false ? (
+                      <p className="text-xs font-semibold text-red-600">Out of stock</p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-end gap-4">
+                    <div>
+                      <label
+                        className="mb-1 block text-xs uppercase tracking-[0.18em] text-[#771111]/40"
+                        htmlFor={`grocery-quantity-${index}`}
+                      >
+                        Qty
+                      </label>
+                      <input
+                        aria-label={`Quantity for ${item.ingredient}`}
+                        className="h-9 w-20 rounded-lg border border-[#771111]/20 bg-[#fae7cc] px-3 text-sm text-[#771111] outline-none focus:border-[#771111]/50"
+                        id={`grocery-quantity-${index}`}
+                        max={99}
+                        min={1}
+                        onChange={(event) => {
+                          const parsedValue = Number(event.target.value);
+                          handleUpdateGroceryQuantity(index, Number.isFinite(parsedValue) ? parsedValue : 1);
+                        }}
+                        type="number"
+                        value={item.quantity}
+                      />
+                    </div>
+                    <p className="min-w-16 text-right font-bold text-[#771111]">${item.lineTotal.toFixed(2)}</p>
+                    <button
+                      aria-label="Remove item"
+                      className="text-xs font-semibold uppercase tracking-widest text-[#771111]/40 hover:text-[#771111]"
+                      onClick={() => handleRemoveGroceryItem(index)}
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
               );
             })}
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-wrap gap-3 border-t border-[#771111]/15 pt-5">
             <button
-              className="inline-flex h-11 items-center justify-center rounded-md border border-[#2A2A2A] px-5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={
-                isLoading || groceryList.budgetRemaining === null || groceryList.budgetRemaining <= 0
-              }
-              onClick={() => {
-                void handleFindItemsForRemainingBudget();
-              }}
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-[#771111]/30 px-5 text-xs font-bold uppercase tracking-widest text-[#771111] transition hover:bg-[#771111]/10 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={isLoading || groceryList.budgetRemaining === null || groceryList.budgetRemaining <= 0}
+              onClick={() => { void handleFindItemsForRemainingBudget(); }}
               title={
                 groceryList.budgetRemaining !== null && groceryList.budgetRemaining <= 0
                   ? "No remaining budget"
@@ -577,19 +542,17 @@ export function HomePage(): JSX.Element {
               }
               type="button"
             >
-              Find items for remaining budget
+              Fill remaining budget
             </button>
             <button
-              className="inline-flex h-11 items-center justify-center rounded-md border border-[#2A2A2A] px-5 text-sm font-medium text-white"
-              onClick={() => {
-                void handleAddAllToCart();
-              }}
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-[#771111]/30 px-5 text-xs font-bold uppercase tracking-widest text-[#771111] transition hover:bg-[#771111]/10"
+              onClick={() => { void handleAddAllToCart(); }}
               type="button"
             >
               Add all to cart
             </button>
             <button
-              className="inline-flex h-11 items-center justify-center rounded-md bg-[#00C853] px-5 text-sm font-semibold text-[#08110A]"
+              className="inline-flex h-10 items-center justify-center rounded-lg bg-[#771111] px-5 text-xs font-bold uppercase tracking-widest text-[#fae7cc] transition hover:bg-[#5a0d0d]"
               onClick={handleBuyAllNow}
               type="button"
             >

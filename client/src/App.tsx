@@ -13,7 +13,7 @@ import { Route, Routes } from "react-router-dom";
  */
 export function App(): JSX.Element {
   return (
-    <main className="min-h-screen bg-[#121212] text-white">
+    <main className="min-h-screen bg-[#fae7cc] text-white">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-10">
         <Header />
         <Routes>

@@ -14,9 +14,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   };
 
   public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return {
-      error
-    };
+    return { error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
@@ -30,15 +28,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   public render(): ReactNode {
     if (this.state.error !== null) {
       return (
-        <main className="flex min-h-screen items-center justify-center bg-[#121212] px-6 text-white">
-          <section className="w-full max-w-lg rounded-lg border border-[#2A2A2A] bg-[#181818] p-8 shadow-2xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#00C853]">
+        <main className="flex min-h-screen items-center justify-center bg-[#fae7cc] px-6">
+          <section className="w-full max-w-lg rounded-xl border border-[#771111]/30 bg-[#fae7cc] p-8 shadow-2xl">
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#771111]/60">
               AISLE
             </p>
-            <h1 className="mt-4 text-3xl font-semibold">Something went wrong</h1>
-            <p className="mt-3 text-sm text-[#A0A0A0]">{this.state.error.message}</p>
+            <h1 className="mt-4 font-serif text-3xl font-bold text-[#771111]">Something went wrong</h1>
+            <p className="mt-3 text-sm text-[#771111]/60">{this.state.error.message}</p>
             <button
-              className="mt-8 inline-flex h-11 items-center justify-center rounded-md bg-[#00C853] px-5 text-sm font-semibold text-[#08110A] transition hover:bg-[#20db68]"
+              className="mt-8 inline-flex h-12 items-center justify-center rounded-lg bg-[#771111] px-6 text-sm font-bold uppercase tracking-widest text-[#fae7cc] transition hover:bg-[#5a0d0d]"
               onClick={() => window.location.reload()}
               type="button"
             >

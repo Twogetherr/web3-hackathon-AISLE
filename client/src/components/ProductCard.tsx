@@ -27,57 +27,61 @@ export function ProductCard({
   const isUnavailable = !product.inStock || product.stockQty <= 0;
 
   return (
-    <article className="overflow-hidden rounded-lg border border-[#2A2A2A] bg-[#181818]">
+    <article className="overflow-hidden rounded-xl border border-[#771111]/20 bg-[#fae7cc] shadow-sm transition hover:shadow-md">
       <button
-        className="relative block w-full bg-[#202020]"
+        className="relative block w-full bg-[#771111]/5"
         onClick={() => onOpenProduct(product)}
         type="button"
       >
         <img
           alt={product.name}
-          className="h-64 w-full object-cover"
+          className="h-56 w-full object-cover"
           onError={() => setImageSrc(PRODUCT_PLACEHOLDER_URL)}
           src={imageSrc}
         />
         {product.matchScore !== undefined ? (
-          <span className="absolute right-3 top-3 rounded-full border border-[#214C2D] bg-[#0D1A12]/95 px-3 py-1 text-xs font-semibold text-[#8CE6A9] backdrop-blur-sm">
+          <span className="absolute right-3 top-3 rounded-full border border-[#771111]/30 bg-[#fae7cc]/95 px-3 py-1 text-xs font-bold text-[#771111] backdrop-blur-sm">
             {product.matchScore}% match
           </span>
         ) : null}
+        {isUnavailable ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#fae7cc]/60">
+            <span className="rounded-full border border-[#771111]/30 bg-[#fae7cc] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#771111]/60">
+              Out of stock
+            </span>
+          </div>
+        ) : null}
       </button>
 
-      <div className="space-y-4 p-5">
-        <div className="space-y-1">
+      <div className="space-y-3 p-5">
+        <div className="space-y-0.5">
           <button
-            className="text-left text-lg font-semibold text-white"
+            className="text-left font-serif text-lg font-bold text-[#771111] transition hover:text-[#5a0d0d]"
             onClick={() => onOpenProduct(product)}
             type="button"
           >
             {product.name}
           </button>
-          <p className="text-sm text-[#A0A0A0]">
+          <p className="text-xs text-[#771111]/50">
             {product.brand} · {product.providerName}
           </p>
         </div>
 
         <div className="flex items-center justify-between">
-          <p className="text-xl font-semibold text-white">${product.priceUsdc.toFixed(2)}</p>
+          <p className="font-serif text-xl font-bold text-[#771111]">${product.priceUsdc.toFixed(2)}</p>
           {product.rating !== null ? (
-            <p className="text-sm text-[#A0A0A0]">
-              {product.rating.toFixed(1)} ({product.reviewCount} reviews)
+            <p className="text-xs text-[#771111]/50">
+              ★ {product.rating.toFixed(1)}{" "}
+              <span className="text-[#771111]/30">({product.reviewCount})</span>
             </p>
           ) : null}
         </div>
 
-        {isUnavailable ? (
-          <p className="inline-flex rounded-full border border-[#5A2323] bg-[#2B1414] px-3 py-1 text-xs font-medium text-[#FF7474]">
-            Out of stock
-          </p>
-        ) : null}
+        <div className="h-px w-full bg-[#771111]/10" />
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           <button
-            className="h-11 rounded-md border border-[#2A2A2A] bg-transparent text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-10 rounded-lg border-2 border-[#771111]/30 bg-transparent text-xs font-bold uppercase tracking-widest text-[#771111] transition hover:border-[#771111] hover:bg-[#771111]/5 disabled:cursor-not-allowed disabled:opacity-40"
             disabled={isUnavailable}
             onClick={() => onAddToCart(product)}
             type="button"
@@ -85,7 +89,7 @@ export function ProductCard({
             Add to Cart
           </button>
           <button
-            className="h-11 rounded-md bg-[#00C853] text-sm font-semibold text-[#08110A] disabled:cursor-not-allowed disabled:bg-[#235A34] disabled:text-[#B7D8C0]"
+            className="h-10 rounded-lg bg-[#771111] text-xs font-bold uppercase tracking-widest text-[#fae7cc] transition hover:bg-[#5a0d0d] disabled:cursor-not-allowed disabled:bg-[#771111]/30"
             disabled={isUnavailable}
             onClick={() => onBuyNow(product)}
             type="button"
