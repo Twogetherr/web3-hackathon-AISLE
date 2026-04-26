@@ -13,6 +13,8 @@ export interface Product {
   tags: string[];
   providerId: string;
   providerName: string;
+  /** Present on agent recommendation responses only. */
+  matchScore?: number;
 }
 
 export interface ProductListResult {
@@ -30,6 +32,8 @@ export interface ProductSearchResult {
 export interface ProductSearchParams {
   q?: string;
   category?: string;
+  minPrice?: number;
   maxPrice?: number;
+  providerNames?: string[];
   tags?: string[];
 }

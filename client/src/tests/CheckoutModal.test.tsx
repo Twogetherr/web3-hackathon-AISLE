@@ -71,6 +71,32 @@ describe("CheckoutModal", () => {
         new Response(
           JSON.stringify({
             data: {
+              id: "session-cart",
+              items: [
+                {
+                  productId: "5b03e0e7-c73b-4c59-bf95-cf7afbe0e9b1",
+                  quantity: 1,
+                  priceUsdc: 4.99,
+                  name: "Organic Oat Milk 1L",
+                  imageUrl: "https://example.com/oat-milk.png"
+                }
+              ],
+              createdAt: "2026-04-25T08:00:00.000Z",
+              updatedAt: "2026-04-25T08:00:00.000Z",
+              totalUsdc: 4.99
+            },
+            error: null,
+            meta: {
+              timestamp: "2026-04-25T08:10:00.000Z",
+              requestId: "request-replace"
+            }
+          })
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: {
               orderId: "draft-order-id",
               txHash: "",
               amountUsdc: 4.99,

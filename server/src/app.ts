@@ -7,7 +7,7 @@ import { createErrorResponse, createSuccessResponse } from "./lib/response.js";
 import { assertValidUuid, parseOptionalPositiveNumber } from "./lib/validation.js";
 import { recommendProducts } from "./services/agentRecommendationService.js";
 import { generateGroceryList } from "./services/groceryListService.js";
-import { addItemToCart, getCartById } from "./services/cartService.js";
+import { addItemToCart, getCartById, replaceCartItems } from "./services/cartService.js";
 import { createCheckout } from "./services/checkoutService.js";
 import { getOrderById } from "./services/orderService.js";
 import { getProductById, listProducts, searchProducts } from "./services/productService.js";
@@ -58,10 +58,18 @@ export function createApp(): Express {
 
   app.get("/api/products/search", async (request, response) => {
     try {
+      const minPrice = parseOptionalPositiveNumber(
+        typeof request.query.minPrice === "string" ? request.query.minPrice : undefined,
+        "minPrice"
+      );
       const maxPrice = parseOptionalPositiveNumber(
         typeof request.query.maxPrice === "string" ? request.query.maxPrice : undefined,
         "maxPrice"
       );
+      const providerNames =
+        typeof request.query.providerNames === "string" && request.query.providerNames.length > 0
+          ? request.query.providerNames.split(",")
+          : undefined;
       const tags =
         typeof request.query.tags === "string" && request.query.tags.length > 0
           ? request.query.tags.split(",")
@@ -71,7 +79,9 @@ export function createApp(): Express {
         q: typeof request.query.q === "string" ? request.query.q : undefined,
         category:
           typeof request.query.category === "string" ? request.query.category : undefined,
+        minPrice,
         maxPrice,
+        providerNames,
         tags
       });
 
@@ -97,8 +107,10 @@ export function createApp(): Express {
       assertValidPrompt(request.body?.prompt);
       const recommendation = await recommendProducts({
         prompt: request.body.prompt,
+        minPrice: request.body.minPrice,
         maxPrice: request.body.maxPrice,
-        filters: request.body.filters
+        filters: request.body.filters,
+        refreshGeneration: parseOptionalNonNegativeInt(request.body?.refreshGeneration)
       });
 
       return response.status(200).json(createSuccessResponse(recommendation));
@@ -145,6 +157,19 @@ export function createApp(): Express {
     try {
       assertNonEmptyString(request.params.id, "INVALID_CART_ID", "cartId is required.");
       const cart = await getCartById(request.params.id);
+
+      return response.status(200).json(createSuccessResponse(cart));
+    } catch (error) {
+      return sendErrorResponse(error, response);
+    }
+  });
+
+  app.put("/api/cart/:id/replace", async (request, response) => {
+    try {
+      assertNonEmptyString(request.params.id, "INVALID_CART_ID", "cartId is required.");
+      assertReplaceCartItemsBody(request.body?.items);
+
+      const cart = await replaceCartItems(request.params.id, request.body.items);
 
       return response.status(200).json(createSuccessResponse(cart));
     } catch (error) {
@@ -247,5 +272,44 @@ function assertNonEmptyString(
 ): asserts value is string {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new AppError(code, message, 400);
+  }
+}
+
+function parseOptionalNonNegativeInt(value: unknown): number | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new AppError(
+      "INVALID_REFRESH_GENERATION",
+      "refreshGeneration must be a non-negative integer.",
+      400
+    );
+  }
+
+  return Math.min(value, 50);
+}
+
+function assertReplaceCartItemsBody(
+  value: unknown
+): asserts value is Array<{ productId: string; quantity: number }> {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new AppError("INVALID_CART_ITEMS", "items must be a non-empty array.", 400);
+  }
+
+  for (const entry of value) {
+    if (typeof entry !== "object" || entry === null) {
+      throw new AppError("INVALID_CART_ITEMS", "Each item must be an object.", 400);
+    }
+
+    const record = entry as Record<string, unknown>;
+
+    if (typeof record.productId !== "string") {
+      throw new AppError("INVALID_CART_ITEMS", "Each item must include a productId string.", 400);
+    }
+
+    assertValidUuid(record.productId);
+    assertValidQuantity(record.quantity);
   }
 }

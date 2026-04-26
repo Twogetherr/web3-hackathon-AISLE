@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { fetchGroceryList, fetchRecommendations, postCartItem } from "../lib/apiClient";
 import { getOrCreateSessionId } from "../lib/session";
 import { isListModePrompt, validatePrompt } from "../lib/validation";
@@ -10,6 +10,20 @@ import type { Product } from "../types/product";
 import { ProductCard } from "./ProductCard";
 
 const PRODUCT_PLACEHOLDER_URL = "/placeholder-product.svg";
+const PRICE_BANDS = [
+  { id: "under-5", label: "Under $5", minPrice: undefined, maxPrice: 5 },
+  { id: "5-10", label: "$5 to $10", minPrice: 5, maxPrice: 10 },
+  { id: "10-15", label: "$10 to $15", minPrice: 10, maxPrice: 15 },
+  { id: "15-20", label: "$15 to $20", minPrice: 15, maxPrice: 20 },
+  { id: "above-20", label: "Above $20", minPrice: 20, maxPrice: undefined }
+] as const;
+const PROVIDER_OPTIONS = [
+  "Countdown",
+  "Pak'nSave",
+  "New World",
+  "Four Square",
+  "Fresh Choice"
+] as const;
 
 /**
  * Renders the main shopper experience for prompt-based discovery.
@@ -19,21 +33,47 @@ const PRODUCT_PLACEHOLDER_URL = "/placeholder-product.svg";
  */
 export function HomePage(): JSX.Element {
   const navigate = useNavigate();
+  const location = useLocation();
   const [prompt, setPrompt] = useState("");
   const [listPrompt, setListPrompt] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [singleResult, setSingleResult] = useState<RecommendResponseData | null>(null);
   const [groceryList, setGroceryList] = useState<GroceryListResponseData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [recommendRefreshGeneration, setRecommendRefreshGeneration] = useState(0);
+  const [priceBandId, setPriceBandId] = useState<(typeof PRICE_BANDS)[number]["id"] | "">("");
+  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
+  const [resultHistory, setResultHistory] = useState<RecommendResponseData[]>([]);
+  const [resultHistoryIndex, setResultHistoryIndex] = useState(-1);
 
   const addItem = useCartStore((state) => state.addItem);
+  const clearCart = useCartStore((state) => state.clearCart);
   const openCheckout = useCheckoutStore((state) => state.open);
+
+  useEffect(() => {
+    const restore = (
+      location.state as { restoreSearch?: { prompt: string; singleResult: RecommendResponseData } } | null
+    )?.restoreSearch;
+
+    if (restore === undefined) {
+      return;
+    }
+
+    setPrompt(restore.prompt);
+    setSingleResult(restore.singleResult);
+    setGroceryList(null);
+    setErrorMessage(null);
+    setRecommendRefreshGeneration(0);
+    setResultHistory([restore.singleResult]);
+    setResultHistoryIndex(0);
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.key, location.pathname, navigate]);
   const groceryBudget =
     groceryList?.budgetRemaining === null || groceryList === null
       ? null
       : Number((groceryList.totalUsdc + groceryList.budgetRemaining).toFixed(2));
 
-  async function handleSubmit(): Promise<void> {
+  async function handleSubmit(options?: { isRefresh?: boolean }): Promise<void> {
     const validationMessage = validatePrompt(prompt);
 
     if (validationMessage !== null) {
@@ -53,10 +93,34 @@ export function HomePage(): JSX.Element {
         setGroceryList(nextGroceryList);
         setListPrompt(prompt);
         setSingleResult(null);
+        setRecommendRefreshGeneration(0);
+        setResultHistory([]);
+        setResultHistoryIndex(-1);
       } else {
-        const nextRecommendations = await fetchRecommendations(prompt);
+        const selectedPriceBand =
+          priceBandId.length === 0
+            ? undefined
+            : PRICE_BANDS.find((priceBand) => priceBand.id === priceBandId);
+        const refreshGen = options?.isRefresh === true ? recommendRefreshGeneration + 1 : 0;
+        const nextRecommendations = await fetchRecommendations(prompt, {
+          refreshGeneration: refreshGen,
+          minPrice: selectedPriceBand?.minPrice,
+          maxPrice: selectedPriceBand?.maxPrice,
+          providerNames: selectedProviders.length > 0 ? selectedProviders : undefined
+        });
         setSingleResult(nextRecommendations);
         setGroceryList(null);
+        setRecommendRefreshGeneration(refreshGen);
+        setResultHistory((currentHistory) => {
+          if (options?.isRefresh === true) {
+            const nextHistory = currentHistory.slice(0, resultHistoryIndex + 1);
+            nextHistory.push(nextRecommendations);
+            return nextHistory;
+          }
+
+          return [nextRecommendations];
+        });
+        setResultHistoryIndex(options?.isRefresh === true ? resultHistoryIndex + 1 : 0);
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Search failed.");
@@ -69,6 +133,25 @@ export function HomePage(): JSX.Element {
     if (key === "Enter") {
       void handleSubmit();
     }
+  }
+
+  function handleToggleProvider(providerName: string): void {
+    setSelectedProviders((currentProviders) =>
+      currentProviders.includes(providerName)
+        ? currentProviders.filter((entry) => entry !== providerName)
+        : [...currentProviders, providerName]
+    );
+  }
+
+  function handleShowPreviousRecommendations(): void {
+    if (resultHistoryIndex <= 0) {
+      return;
+    }
+
+    const previousIndex = resultHistoryIndex - 1;
+    setSingleResult(resultHistory[previousIndex] ?? null);
+    setResultHistoryIndex(previousIndex);
+    setRecommendRefreshGeneration(previousIndex);
   }
 
   async function handleAddToCart(product: Product): Promise<void> {
@@ -92,6 +175,14 @@ export function HomePage(): JSX.Element {
   }
 
   function handleBuyNow(product: Product): void {
+    clearCart();
+    addItem({
+      productId: product.id,
+      quantity: 1,
+      priceUsdc: product.priceUsdc,
+      name: product.name,
+      imageUrl: product.imageUrl
+    });
     openCheckout([
       {
         productId: product.id,
@@ -198,8 +289,8 @@ export function HomePage(): JSX.Element {
       return;
     }
 
-    openCheckout(
-      groceryList.items
+    clearCart();
+    const checkoutLines = groceryList.items
         .filter(
           (item): item is GroceryListResponseData["items"][number] & { product: Product } =>
             item.product !== null && item.product.inStock
@@ -210,8 +301,13 @@ export function HomePage(): JSX.Element {
           priceUsdc: item.product.priceUsdc,
           name: item.product.name,
           imageUrl: item.product.imageUrl
-        }))
-    );
+        }));
+
+    for (const line of checkoutLines) {
+      addItem(line);
+    }
+
+    openCheckout(checkoutLines);
   }
 
   async function handleFindItemsForRemainingBudget(): Promise<void> {
@@ -265,6 +361,46 @@ export function HomePage(): JSX.Element {
             {isLoading ? "Searching..." : "Search"}
           </button>
         </div>
+        {prompt.trim().length > 0 ? (
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-white" htmlFor="budget-range">
+                Budget range
+              </label>
+              <select
+                className="h-11 w-full rounded-md border border-[#2A2A2A] bg-[#101010] px-3 text-sm text-white outline-none"
+                id="budget-range"
+                onChange={(event) =>
+                  setPriceBandId(event.target.value as (typeof PRICE_BANDS)[number]["id"] | "")
+                }
+                value={priceBandId}
+              >
+                <option value="">Any budget</option>
+                {PRICE_BANDS.map((priceBand) => (
+                  <option key={priceBand.id} value={priceBand.id}>
+                    {priceBand.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <fieldset>
+              <legend className="mb-2 text-sm font-medium text-white">Preferred provider</legend>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {PROVIDER_OPTIONS.map((providerName) => (
+                  <label className="flex items-center gap-2 text-sm text-[#D9D9D9]" key={providerName}>
+                    <input
+                      checked={selectedProviders.includes(providerName)}
+                      className="h-4 w-4 rounded border border-[#2A2A2A] bg-[#101010] text-[#00C853]"
+                      onChange={() => handleToggleProvider(providerName)}
+                      type="checkbox"
+                    />
+                    <span>{providerName}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          </div>
+        ) : null}
         {errorMessage !== null ? (
           <p className="mt-3 text-sm text-[#FF7474]">{errorMessage}</p>
         ) : null}
@@ -274,15 +410,26 @@ export function HomePage(): JSX.Element {
         <div className="space-y-4">
           <div className="flex items-center justify-between rounded-lg border border-[#2A2A2A] bg-[#181818] px-4 py-3">
             <p className="text-sm text-[#A0A0A0]">{singleResult.reasoning}</p>
-            <button
-              className="inline-flex h-10 items-center justify-center rounded-md border border-[#2A2A2A] px-4 text-sm font-medium text-white"
-              onClick={() => {
-                void handleSubmit();
-              }}
-              type="button"
-            >
-              Refresh results
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                className="inline-flex h-10 items-center justify-center rounded-md border border-[#2A2A2A] px-4 text-sm font-medium text-white"
+                onClick={() => {
+                  void handleSubmit({ isRefresh: true });
+                }}
+                type="button"
+              >
+                Refresh results
+              </button>
+              {resultHistoryIndex > 0 ? (
+                <button
+                  className="inline-flex h-10 items-center justify-center rounded-md border border-[#2A2A2A] px-4 text-sm font-medium text-white"
+                  onClick={handleShowPreviousRecommendations}
+                  type="button"
+                >
+                  Back to previous results
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -293,7 +440,13 @@ export function HomePage(): JSX.Element {
                   void handleAddToCart(nextProduct);
                 }}
                 onBuyNow={handleBuyNow}
-                onOpenProduct={(nextProduct) => navigate(`/products/${nextProduct.id}`)}
+                onOpenProduct={(nextProduct) =>
+                  navigate(`/products/${nextProduct.id}`, {
+                    state: {
+                      searchSnapshot: { prompt, singleResult }
+                    }
+                  })
+                }
                 product={product}
               />
             ))}

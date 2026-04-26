@@ -59,7 +59,9 @@ export async function searchProducts(params: ProductSearchParams): Promise<Produ
     requestId: "system",
     q: params.q ?? null,
     category: params.category ?? null,
+    minPrice: params.minPrice ?? null,
     maxPrice: params.maxPrice ?? null,
+    providerNames: params.providerNames ?? [],
     tags: params.tags ?? []
   });
 

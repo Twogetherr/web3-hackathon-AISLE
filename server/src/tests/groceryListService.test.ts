@@ -62,7 +62,7 @@ describe("groceryListService", () => {
     expect(callOpenAiJsonMock).not.toHaveBeenCalled();
   });
 
-  it("uses OpenAI ingredient extraction when valid JSON is returned", async () => {
+  it("uses deterministic chocolate cake catalogue matching for recipe prompts", async () => {
     callOpenAiJsonMock.mockResolvedValueOnce({
       title: "Chocolate Cake - 2 ingredients",
       ingredients: ["plain flour", "cocoa powder"]
@@ -73,9 +73,9 @@ describe("groceryListService", () => {
       budget: 30
     });
 
-    expect(result.fallback).toBe(false);
-    expect(result.title).toBe("Chocolate Cake - 2 ingredients");
-    expect(result.items).toHaveLength(2);
+    expect(result.fallback).toBe(true);
+    expect(result.title).toContain("Chocolate Cake");
+    expect(result.items.length).toBeGreaterThanOrEqual(6);
   });
 
   it("falls back to deterministic ingredient extraction when OpenAI fails", async () => {

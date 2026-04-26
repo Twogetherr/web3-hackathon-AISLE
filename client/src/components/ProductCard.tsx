@@ -29,7 +29,7 @@ export function ProductCard({
   return (
     <article className="overflow-hidden rounded-lg border border-[#2A2A2A] bg-[#181818]">
       <button
-        className="block w-full bg-[#202020]"
+        className="relative block w-full bg-[#202020]"
         onClick={() => onOpenProduct(product)}
         type="button"
       >
@@ -39,6 +39,11 @@ export function ProductCard({
           onError={() => setImageSrc(PRODUCT_PLACEHOLDER_URL)}
           src={imageSrc}
         />
+        {product.matchScore !== undefined ? (
+          <span className="absolute right-3 top-3 rounded-full border border-[#214C2D] bg-[#0D1A12]/95 px-3 py-1 text-xs font-semibold text-[#8CE6A9] backdrop-blur-sm">
+            {product.matchScore}% match
+          </span>
+        ) : null}
       </button>
 
       <div className="space-y-4 p-5">

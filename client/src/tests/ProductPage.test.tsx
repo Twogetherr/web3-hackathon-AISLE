@@ -78,7 +78,6 @@ describe("ProductPage", () => {
   });
 
   it("shows temporary added confirmation after adding to cart", async () => {
-    vi.useFakeTimers();
     vi.spyOn(global, "fetch")
       .mockResolvedValueOnce(
         new Response(
@@ -141,16 +140,17 @@ describe("ProductPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Add to Cart" }));
 
-    expect(screen.getByRole("button", { name: "Added ✓" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Added ✓" })).toBeInTheDocument();
+    });
     expect(useCartStore.getState().items[0]?.quantity).toBe(1);
 
-    vi.advanceTimersByTime(2000);
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Add to Cart" })).toBeInTheDocument();
-    });
-
-    vi.useRealTimers();
+    await waitFor(
+      () => {
+        expect(screen.getByRole("button", { name: "Add to Cart" })).toBeInTheDocument();
+      },
+      { timeout: 4000 }
+    );
   });
 
   it("disables CTAs and shows the out-of-stock banner", async () => {
@@ -193,7 +193,7 @@ describe("ProductPage", () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByText("Out of stock")).toBeInTheDocument();
+    expect((await screen.findAllByText(/out of stock/i)).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("button", { name: "Add to Cart" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Buy Now" })).toBeDisabled();
   });

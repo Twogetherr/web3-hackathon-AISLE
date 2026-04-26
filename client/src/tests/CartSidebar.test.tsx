@@ -42,7 +42,7 @@ describe("CartSidebar", () => {
     expect(await screen.findByText("Your cart")).toBeInTheDocument();
     expect(screen.getByText("Organic Oat Milk 1L")).toBeInTheDocument();
     expect(screen.getByText("Qty 2")).toBeInTheDocument();
-    expect(screen.getByText("$9.98")).toBeInTheDocument();
+    expect(screen.getAllByText("$9.98").length).toBeGreaterThanOrEqual(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Checkout" }));
 

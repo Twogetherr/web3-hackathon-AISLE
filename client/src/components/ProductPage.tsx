@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { fetchProductById, postCartItem } from "../lib/apiClient";
 import { getOrCreateSessionId } from "../lib/session";
 import { useCartStore } from "../store/cartStore";
 import { useCheckoutStore } from "../store/checkoutStore";
+import type { RecommendResponseData } from "../types/agent";
 import type { Product } from "../types/product";
 
 /**
@@ -15,8 +16,16 @@ import type { Product } from "../types/product";
 export function ProductPage(): JSX.Element {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const addItem = useCartStore((state) => state.addItem);
+  const clearCart = useCartStore((state) => state.clearCart);
   const openCheckout = useCheckoutStore((state) => state.open);
+
+  const searchSnapshot = (
+    location.state as {
+      searchSnapshot?: { prompt: string; singleResult: RecommendResponseData };
+    } | null
+  )?.searchSnapshot;
 
   const [product, setProduct] = useState<Product | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -98,6 +107,14 @@ export function ProductPage(): JSX.Element {
       return;
     }
 
+    clearCart();
+    addItem({
+      productId: product.id,
+      quantity,
+      priceUsdc: product.priceUsdc,
+      name: product.name,
+      imageUrl: product.imageUrl
+    });
     openCheckout([
       {
         productId: product.id,
@@ -107,6 +124,15 @@ export function ProductPage(): JSX.Element {
         imageUrl: product.imageUrl
       }
     ]);
+  }
+
+  function handleBackToResults(): void {
+    if (searchSnapshot !== undefined) {
+      navigate("/", { state: { restoreSearch: searchSnapshot } });
+      return;
+    }
+
+    navigate("/");
   }
 
   if (errorMessage !== null) {
@@ -154,7 +180,7 @@ export function ProductPage(): JSX.Element {
         <div className="space-y-5">
           <button
             className="text-sm font-medium text-[#00C853]"
-            onClick={() => navigate(-1)}
+            onClick={handleBackToResults}
             type="button"
           >
             Back to results

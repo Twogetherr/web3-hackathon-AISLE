@@ -7,17 +7,19 @@ vi.mock("../services/cartService", async (importOriginal) => {
   return {
     ...actual,
     addItemToCart: vi.fn(),
-    getCartById: vi.fn()
+    getCartById: vi.fn(),
+    replaceCartItems: vi.fn()
   };
 });
 
 import { createApp } from "../app";
 import { AppError } from "../lib/errors";
-import { addItemToCart, getCartById } from "../services/cartService";
+import { addItemToCart, getCartById, replaceCartItems } from "../services/cartService";
 
 describe("cart routes", () => {
   const addItemToCartMock = vi.mocked(addItemToCart);
   const getCartByIdMock = vi.mocked(getCartById);
+  const replaceCartItemsMock = vi.mocked(replaceCartItems);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -97,5 +99,35 @@ describe("cart routes", () => {
       code: "NOT_FOUND",
       message: "Cart not found."
     });
+  });
+
+  it("replaces a cart snapshot when a valid items payload is provided", async () => {
+    replaceCartItemsMock.mockResolvedValueOnce({
+      id: "aisle-session-1",
+      items: [
+        {
+          productId: "5b03e0e7-c73b-4c59-bf95-cf7afbe0e9b1",
+          quantity: 1,
+          priceUsdc: 4.99,
+          name: "Organic Oat Milk 1L",
+          imageUrl: "https://example.com/oat-milk.png"
+        }
+      ],
+      createdAt: "2026-04-25T08:00:00.000Z",
+      updatedAt: "2026-04-25T08:02:00.000Z",
+      totalUsdc: 4.99
+    });
+
+    const response = await request(createApp())
+      .put("/api/cart/aisle-session-1/replace")
+      .send({
+        items: [{ productId: "5b03e0e7-c73b-4c59-bf95-cf7afbe0e9b1", quantity: 1 }]
+      });
+
+    expect(response.status).toBe(200);
+    expect(replaceCartItemsMock).toHaveBeenCalledWith("aisle-session-1", [
+      { productId: "5b03e0e7-c73b-4c59-bf95-cf7afbe0e9b1", quantity: 1 }
+    ]);
+    expect(response.body.data.totalUsdc).toBe(4.99);
   });
 });

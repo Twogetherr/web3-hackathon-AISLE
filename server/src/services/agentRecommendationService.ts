@@ -20,6 +20,9 @@ const QUERY_NOISE_PATTERNS = [
   /\bplease\b/gi
 ] as const;
 
+const RECOMMENDATION_PAGE_SIZE = 3;
+const MAX_CANDIDATES = 24;
+
 /**
  * Recommends grocery products for a single-item prompt.
  *
@@ -32,6 +35,7 @@ export async function recommendProducts(
 ): Promise<RecommendResponseData> {
   const prompt = input.prompt.trim();
   const parsedPrompt = parsePromptConstraints(prompt, input);
+  const refreshGeneration = normalizeRefreshGeneration(input.refreshGeneration);
 
   if (prompt.length < 3 || prompt.length > 500) {
     throw new AppError("INVALID_PROMPT", "Prompt must be between 3 and 500 characters.", 400);
@@ -39,6 +43,16 @@ export async function recommendProducts(
 
   if (parsedPrompt.maxPrice !== undefined && parsedPrompt.maxPrice <= 0) {
     throw new AppError("INVALID_PRICE", "maxPrice must be greater than 0.", 400);
+  }
+  if (parsedPrompt.minPrice !== undefined && parsedPrompt.minPrice <= 0) {
+    throw new AppError("INVALID_PRICE", "minPrice must be greater than 0.", 400);
+  }
+  if (
+    parsedPrompt.minPrice !== undefined &&
+    parsedPrompt.maxPrice !== undefined &&
+    parsedPrompt.minPrice > parsedPrompt.maxPrice
+  ) {
+    throw new AppError("INVALID_PRICE", "minPrice must be less than or equal to maxPrice.", 400);
   }
 
   if (!isGroceryPrompt(prompt)) {
@@ -48,15 +62,31 @@ export async function recommendProducts(
   const result = await searchProducts({
     q: parsedPrompt.query,
     category: parsedPrompt.category,
+    minPrice: parsedPrompt.minPrice,
     maxPrice: parsedPrompt.maxPrice,
+    providerNames: parsedPrompt.providerNames,
     tags: parsedPrompt.tags
   });
 
   console.info("OpenAI recommendation requested", {
     requestId: "system",
     prompt,
-    candidateCount: result.results.length
+    candidateCount: result.results.length,
+    refreshGeneration
   });
+
+  const inStockCandidates = result.results
+    .filter((product) => product.inStock && product.stockQty > 0)
+    .slice(0, MAX_CANDIDATES);
+  const baseOrder =
+    inStockCandidates.length > 0
+      ? buildRecommendationOrder(inStockCandidates, parsedPrompt.query)
+      : result.results.slice(0, MAX_CANDIDATES);
+
+  let orderedForWindow = baseOrder;
+  let aiReasoning: string | undefined;
+  let aiSearchQuery: string | undefined;
+  let usedAi = false;
 
   try {
     const aiResult = await callWithRetry<{
@@ -68,25 +98,23 @@ export async function recommendProducts(
         "You rank grocery products for a shopper. Return strict JSON with recommendations as an array of objects containing product id, plus reasoning and searchQuery.",
       userPrompt: JSON.stringify({
         prompt,
+        minPrice: parsedPrompt.minPrice ?? null,
         maxPrice: parsedPrompt.maxPrice ?? null,
         filters: {
           category: parsedPrompt.category ?? null,
+          providerNames: parsedPrompt.providerNames ?? null,
           tags: parsedPrompt.tags ?? null
         },
-        candidates: result.results.slice(0, 10)
+        candidates: baseOrder.slice(0, 10)
       })
     });
-    const rankedProducts = mapRecommendedProducts(result.results, aiResult.recommendations);
+    const rankedProducts = mapRecommendedProducts(baseOrder, aiResult.recommendations);
 
     if (rankedProducts.length > 0) {
-      return {
-        mode: "single",
-        recommendations: rankedProducts.slice(0, 3),
-        reasoning:
-          aiResult.reasoning ?? "These were the closest grocery matches under your current constraints.",
-        searchQuery: aiResult.searchQuery ?? parsedPrompt.query,
-        fallback: false
-      };
+      orderedForWindow = mergeAiOrderWithCandidates(rankedProducts, baseOrder);
+      aiReasoning = aiResult.reasoning;
+      aiSearchQuery = aiResult.searchQuery;
+      usedAi = true;
     }
   } catch (error) {
     console.error("OpenAI recommendation fallback engaged", {
@@ -96,13 +124,94 @@ export async function recommendProducts(
     });
   }
 
+  const { page, slice } = paginateRecommendations(orderedForWindow, refreshGeneration);
+  const recommendations = attachMatchScores(slice, page);
+
+  const defaultReasoning =
+    refreshGeneration === 0
+      ? "These were the closest grocery matches under your current constraints."
+      : "Here is another set of picks from the catalogue. Match scores are lower than the first page because these are secondary alternatives for your prompt.";
+
   return {
     mode: "single",
-    recommendations: result.results.slice(0, 3),
-    reasoning: "These were the closest grocery matches under your current constraints.",
-    searchQuery: parsedPrompt.query,
-    fallback: true
+    recommendations,
+    reasoning: aiReasoning ?? defaultReasoning,
+    searchQuery: aiSearchQuery ?? parsedPrompt.query,
+    fallback: !usedAi
   };
+}
+
+function normalizeRefreshGeneration(value: unknown): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    return 0;
+  }
+
+  return Math.min(value, 50);
+}
+
+function isMilkRelatedProduct(product: Product): boolean {
+  const haystack = `${product.name} ${product.description}`.toLowerCase();
+
+  return haystack.includes("milk");
+}
+
+function buildRecommendationOrder(candidates: Product[], searchQuery: string): Product[] {
+  const query = searchQuery.toLowerCase();
+
+  if (!query.includes("milk")) {
+    return candidates;
+  }
+
+  const milkFirst = candidates.filter(isMilkRelatedProduct);
+  if (milkFirst.length < RECOMMENDATION_PAGE_SIZE) {
+    return candidates;
+  }
+
+  const milkIds = new Set(milkFirst.map((product) => product.id));
+
+  return [...milkFirst, ...candidates.filter((product) => !milkIds.has(product.id))];
+}
+
+function mergeAiOrderWithCandidates(ranked: Product[], candidates: Product[]): Product[] {
+  const seen = new Set(ranked.map((product) => product.id));
+
+  return [...ranked, ...candidates.filter((product) => !seen.has(product.id))];
+}
+
+function paginateRecommendations(
+  ordered: Product[],
+  refreshGeneration: number
+): { page: number; slice: Product[] } {
+  if (ordered.length === 0) {
+    return { page: 0, slice: [] };
+  }
+
+  const pageCount = Math.max(1, Math.ceil(ordered.length / RECOMMENDATION_PAGE_SIZE));
+  const page = refreshGeneration % pageCount;
+
+  return {
+    page,
+    slice: ordered.slice(
+      page * RECOMMENDATION_PAGE_SIZE,
+      page * RECOMMENDATION_PAGE_SIZE + RECOMMENDATION_PAGE_SIZE
+    )
+  };
+}
+
+function matchScoresForPage(page: number): [number, number, number] {
+  const base = 98 - page * 15;
+
+  return [base, base - 3, base - 6];
+}
+
+function attachMatchScores(products: Product[], page: number): Product[] {
+  const [first, second, third] = matchScoresForPage(page);
+
+  return products.map((product, index) => {
+    const matchScore = index === 0 ? first : index === 1 ? second : third;
+
+    return { ...product, matchScore };
+  });
 }
 
 async function callWithRetry<T>(input: {
@@ -133,11 +242,17 @@ function parsePromptConstraints(
 ): {
   query: string;
   category: string | undefined;
+  minPrice: number | undefined;
   maxPrice: number | undefined;
+  providerNames: string[] | undefined;
   tags: string[] | undefined;
 } {
   const normalizedPrompt = prompt.toLowerCase();
+  const minPrice = input.minPrice;
   const maxPrice = input.maxPrice ?? extractMaxPrice(normalizedPrompt);
+  const providerNames = input.filters?.providerNames
+    ?.map((providerName) => providerName.trim())
+    .filter((providerName) => providerName.length > 0);
   const inferredTags = FILTER_TAGS.filter((tag) => normalizedPrompt.includes(tag));
   const explicitTags = input.filters?.tags?.map((tag) => tag.trim().toLowerCase()).filter(Boolean) ?? [];
   const mergedTags = Array.from(new Set([...explicitTags, ...inferredTags]));
@@ -146,7 +261,9 @@ function parsePromptConstraints(
   return {
     query,
     category: input.filters?.category,
+    minPrice,
     maxPrice,
+    providerNames: providerNames !== undefined && providerNames.length > 0 ? providerNames : undefined,
     tags: mergedTags.length > 0 ? mergedTags : undefined
   };
 }

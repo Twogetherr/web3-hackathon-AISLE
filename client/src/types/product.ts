@@ -13,4 +13,6 @@ export interface Product {
   tags: string[];
   providerId: string;
   providerName: string;
+  /** Present on agent recommendation responses only. */
+  matchScore?: number;
 }

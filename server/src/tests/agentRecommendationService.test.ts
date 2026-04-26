@@ -22,6 +22,7 @@ import { AppError } from "../lib/errors";
 import { callOpenAiJson } from "../lib/openai";
 import { recommendProducts } from "../services/agentRecommendationService";
 import { searchProducts } from "../services/productService";
+import type { Product } from "../types/product";
 
 describe("agentRecommendationService", () => {
   const callOpenAiJsonMock = vi.mocked(callOpenAiJson);
@@ -29,6 +30,7 @@ describe("agentRecommendationService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    callOpenAiJsonMock.mockReset();
     searchProductsMock.mockResolvedValue({
       results: [
         {
@@ -103,8 +105,53 @@ describe("agentRecommendationService", () => {
     expect(searchProductsMock).toHaveBeenCalledWith({
       q: "oat milk",
       category: undefined,
+      minPrice: undefined,
       maxPrice: 5,
+      providerNames: undefined,
       tags: ["organic"]
     });
+  });
+
+  it("returns a lower-scoring second page when refreshGeneration increments", async () => {
+    callOpenAiJsonMock.mockRejectedValue(new Error("timeout"));
+
+    const demoMilk = (suffix: string, name: string, priceUsdc: number): Product => ({
+      id: `10000000-0000-4000-8000-0000000000${suffix}`,
+      name,
+      brand: "Demo",
+      category: "dairy",
+      description: "Fresh milk for cereal and baking.",
+      priceUsdc,
+      imageUrl: "https://example.com/milk.png",
+      inStock: true,
+      stockQty: 10,
+      rating: 4.5,
+      reviewCount: 10,
+      tags: ["dairy"],
+      providerId: "11111111-1111-4111-8111-111111111111",
+      providerName: "Fresh Lane"
+    });
+
+    searchProductsMock.mockResolvedValue({
+      results: [
+        demoMilk("31", "Whole Milk 2L", 3.1),
+        demoMilk("32", "Skim Milk 2L", 3.2),
+        demoMilk("33", "Chocolate Milk 1L", 3.3),
+        demoMilk("34", "Almond Milk 1L", 3.4),
+        demoMilk("35", "Soy Milk 1L", 3.5),
+        demoMilk("36", "Lactose-Free Milk 2L", 3.6)
+      ],
+      total: 6
+    });
+
+    const first = await recommendProducts({ prompt: "milk", refreshGeneration: 0 });
+    const second = await recommendProducts({ prompt: "milk", refreshGeneration: 1 });
+
+    expect(first.recommendations.map((product) => product.id)).not.toEqual(
+      second.recommendations.map((product) => product.id)
+    );
+    expect(first.recommendations[0]?.matchScore ?? 0).toBeGreaterThan(
+      second.recommendations[0]?.matchScore ?? 0
+    );
   });
 });

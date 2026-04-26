@@ -3,12 +3,16 @@ import type { Product } from "./product.js";
 export interface AgentFilters {
   tags?: string[];
   category?: string;
+  providerNames?: string[];
 }
 
 export interface RecommendRequest {
   prompt: string;
+  minPrice?: number;
   maxPrice?: number;
   filters?: AgentFilters;
+  /** 0 = first page; each increment rotates the next window of up to 3 catalogue picks. */
+  refreshGeneration?: number;
 }
 
 export interface RecommendResponseData {

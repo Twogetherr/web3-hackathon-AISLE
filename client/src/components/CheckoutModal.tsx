@@ -1,4 +1,4 @@
-import { postCheckout } from "../lib/apiClient";
+import { postCheckout, putCartReplace } from "../lib/apiClient";
 import { getOrCreateSessionId } from "../lib/session";
 import { connectBrowserWallet, submitUnsignedTransaction } from "../lib/wallet";
 import { useCartStore } from "../store/cartStore";
@@ -46,6 +46,11 @@ export function CheckoutModal(): JSX.Element | null {
     setErrorMessage(null);
 
     try {
+      await putCartReplace(
+        getOrCreateSessionId(),
+        items.map((item) => ({ productId: item.productId, quantity: item.quantity }))
+      );
+
       const preparedOrder = await postCheckout({
         cartId: getOrCreateSessionId(),
         walletAddress

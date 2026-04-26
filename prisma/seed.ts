@@ -5,18 +5,28 @@ const prisma = new PrismaClient();
 const providers = [
   {
     id: "11111111-1111-4111-8111-111111111111",
-    name: "Fresh Lane",
-    description: "Premium everyday groceries with clean labels and strong pantry coverage."
+    name: "Countdown",
+    description: "National supermarket with broad everyday grocery coverage."
   },
   {
     id: "22222222-2222-4222-8222-222222222222",
-    name: "Green Cart",
-    description: "Organic-forward staples, produce, and dairy alternatives."
+    name: "Pak'nSave",
+    description: "Value-focused range for budget-friendly household staples."
   },
   {
     id: "33333333-3333-4333-8333-333333333333",
-    name: "Market Basket",
-    description: "Budget-friendly basics across frozen, snacks, meats, and condiments."
+    name: "New World",
+    description: "Full-service grocery selection with premium and specialty options."
+  },
+  {
+    id: "44444444-4444-4444-8444-444444444444",
+    name: "Four Square",
+    description: "Convenience-oriented neighbourhood grocery with quick essentials."
+  },
+  {
+    id: "55555555-5555-4555-8555-555555555555",
+    name: "Fresh Choice",
+    description: "Fresh produce and local pantry picks with curated ranges."
   }
 ] as const;
 
@@ -26,45 +36,45 @@ function buildImageUrl(label: string): string {
 
 const products: Prisma.ProductCreateManyInput[] = [
   {
-    name: "Organic Oat Milk 1L",
-    brand: "Oatly",
+    name: "A2 Fresh Milk 1L",
+    brand: "A2",
     category: "beverages",
-    description: "Smooth organic oat milk with a creamy finish for coffee, cereal, or baking.",
-    priceUsdc: "4.79",
-    imageUrl: buildImageUrl("Organic Oat Milk 1L"),
+    description: "Fresh A2 milk for everyday cereal, coffee, and baking.",
+    priceUsdc: "5.49",
+    imageUrl: buildImageUrl("A2 Fresh Milk 1L"),
     inStock: true,
-    stockQty: 28,
-    rating: "4.7",
-    reviewCount: 142,
-    tags: ["organic", "vegan", "dairy-free"],
+    stockQty: 32,
+    rating: "4.6",
+    reviewCount: 148,
+    tags: ["dairy", "milk"],
     providerId: providers[1].id
   },
   {
-    name: "Barista Oat Milk 1L",
+    name: "Barista Oat Milk 2L",
     brand: "Minor Figures",
     category: "beverages",
-    description: "Foams cleanly and balances espresso with a slightly sweet oat profile.",
-    priceUsdc: "4.99",
-    imageUrl: buildImageUrl("Barista Oat Milk 1L"),
+    description: "Foams cleanly with a creamy oat body for larger household use.",
+    priceUsdc: "6.29",
+    imageUrl: buildImageUrl("Barista Oat Milk 2L"),
     inStock: true,
-    stockQty: 18,
+    stockQty: 20,
     rating: "4.6",
     reviewCount: 88,
-    tags: ["vegan", "dairy-free", "high-protein"],
+    tags: ["vegan", "dairy-free", "milk"],
     providerId: providers[0].id
   },
   {
-    name: "Whole Milk 2L",
+    name: "Whole Milk 1L",
     brand: "Farm Crest",
     category: "dairy",
-    description: "Rich whole milk for everyday cooking, baking, and breakfast.",
-    priceUsdc: "3.69",
-    imageUrl: buildImageUrl("Whole Milk 2L"),
+    description: "Classic whole milk in a compact bottle.",
+    priceUsdc: "4.79",
+    imageUrl: buildImageUrl("Whole Milk 1L"),
     inStock: true,
     stockQty: 30,
     rating: "4.5",
     reviewCount: 63,
-    tags: ["dairy"],
+    tags: ["dairy", "milk"],
     providerId: providers[0].id
   },
   {
@@ -528,6 +538,160 @@ const products: Prisma.ProductCreateManyInput[] = [
     reviewCount: 61,
     tags: ["baking", "chocolate"],
     providerId: providers[1].id
+  },
+  {
+    name: "Skim Milk 2L",
+    brand: "Farm Crest",
+    category: "dairy",
+    description: "Light skim milk with a clean dairy taste for cereal and everyday drinking.",
+    priceUsdc: "7.19",
+    imageUrl: buildImageUrl("Skim Milk 2L"),
+    inStock: true,
+    stockQty: 36,
+    rating: "4.4",
+    reviewCount: 54,
+    tags: ["dairy", "low-fat", "milk"],
+    providerId: providers[3].id
+  },
+  {
+    name: "Chocolate Milk 1L",
+    brand: "Morning Moo",
+    category: "beverages",
+    description: "Creamy chocolate milk made with real cocoa.",
+    priceUsdc: "8.49",
+    imageUrl: buildImageUrl("Chocolate Milk 1L"),
+    inStock: true,
+    stockQty: 24,
+    rating: "4.6",
+    reviewCount: 112,
+    tags: ["dairy", "beverages", "milk"],
+    providerId: providers[2].id
+  },
+  {
+    name: "Unsweetened Almond Milk 1L",
+    brand: "Blue Orchard",
+    category: "beverages",
+    description: "Zero-sugar almond milk with a mild nutty note.",
+    priceUsdc: "5.99",
+    imageUrl: buildImageUrl("Unsweetened Almond Milk 1L"),
+    inStock: true,
+    stockQty: 32,
+    rating: "4.5",
+    reviewCount: 203,
+    tags: ["vegan", "dairy-free", "milk"],
+    providerId: providers[4].id
+  },
+  {
+    name: "Organic Soy Milk 1L",
+    brand: "Pacific Roots",
+    category: "beverages",
+    description: "Organic soy milk with a smooth body.",
+    priceUsdc: "9.29",
+    imageUrl: buildImageUrl("Organic Soy Milk 1L"),
+    inStock: true,
+    stockQty: 21,
+    rating: "4.3",
+    reviewCount: 76,
+    tags: ["organic", "vegan", "dairy-free", "milk"],
+    providerId: providers[1].id
+  },
+  {
+    name: "Lactose-Free Whole Milk 2L",
+    brand: "Easy Dairy",
+    category: "dairy",
+    description: "Real whole milk without lactose.",
+    priceUsdc: "6.79",
+    imageUrl: buildImageUrl("Lactose-Free Whole Milk 2L"),
+    inStock: true,
+    stockQty: 27,
+    rating: "4.7",
+    reviewCount: 98,
+    tags: ["dairy", "lactose-free", "milk"],
+    providerId: providers[0].id
+  },
+  {
+    name: "A2 Protein Whole Milk 2L",
+    brand: "Heritage Fields",
+    category: "dairy",
+    description: "Whole milk from cows selected for A2 beta-casein protein.",
+    priceUsdc: "10.49",
+    imageUrl: buildImageUrl("A2 Protein Whole Milk 2L"),
+    inStock: true,
+    stockQty: 15,
+    rating: "4.8",
+    reviewCount: 41,
+    tags: ["dairy", "high-protein", "milk"],
+    providerId: providers[4].id
+  },
+  {
+    name: "Goat Milk 1L",
+    brand: "Hillside Dairy",
+    category: "dairy",
+    description: "Mild and creamy goat milk for specialty diets.",
+    priceUsdc: "11.99",
+    imageUrl: buildImageUrl("Goat Milk 1L"),
+    inStock: true,
+    stockQty: 11,
+    rating: "4.4",
+    reviewCount: 27,
+    tags: ["dairy", "milk"],
+    providerId: providers[2].id
+  },
+  {
+    name: "Organic Jersey Milk 2L",
+    brand: "Meadow Gold",
+    category: "dairy",
+    description: "Rich organic Jersey milk with full cream texture.",
+    priceUsdc: "14.50",
+    imageUrl: buildImageUrl("Organic Jersey Milk 2L"),
+    inStock: true,
+    stockQty: 10,
+    rating: "4.7",
+    reviewCount: 19,
+    tags: ["organic", "dairy", "milk"],
+    providerId: providers[3].id
+  },
+  {
+    name: "Premium Lactose-Free Milk 3L",
+    brand: "Silk Valley",
+    category: "dairy",
+    description: "Family-size lactose-free milk with creamy taste.",
+    priceUsdc: "16.99",
+    imageUrl: buildImageUrl("Premium Lactose-Free Milk 3L"),
+    inStock: true,
+    stockQty: 9,
+    rating: "4.5",
+    reviewCount: 13,
+    tags: ["dairy", "lactose-free", "milk"],
+    providerId: providers[1].id
+  },
+  {
+    name: "Chef's Gold Milk 3L",
+    brand: "Chef's Gold",
+    category: "dairy",
+    description: "Premium milk chosen for cafe and bakery use.",
+    priceUsdc: "19.49",
+    imageUrl: buildImageUrl("Chef's Gold Milk 3L"),
+    inStock: true,
+    stockQty: 7,
+    rating: "4.6",
+    reviewCount: 11,
+    tags: ["dairy", "milk"],
+    providerId: providers[0].id
+  },
+  {
+    name: "Artisan Farm Reserve Milk 5L",
+    brand: "Heritage Reserve",
+    category: "dairy",
+    description: "Small-batch reserve milk in a large format for specialty kitchens.",
+    priceUsdc: "22.99",
+    imageUrl: buildImageUrl("Artisan Farm Reserve Milk 5L"),
+    inStock: true,
+    stockQty: 5,
+    rating: "4.9",
+    reviewCount: 8,
+    tags: ["dairy", "milk"],
+    providerId: providers[2].id
   }
 ];
 

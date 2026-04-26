@@ -183,6 +183,24 @@ function createSearchWhereClause(params: ProductSearchParams): Prisma.ProductWhe
     });
   }
 
+  if (params.minPrice !== undefined) {
+    andClauses.push({
+      priceUsdc: {
+        gte: params.minPrice
+      }
+    });
+  }
+
+  if (params.providerNames !== undefined && params.providerNames.length > 0) {
+    andClauses.push({
+      provider: {
+        name: {
+          in: params.providerNames
+        }
+      }
+    });
+  }
+
   if (normalizedTags !== undefined && normalizedTags.length > 0) {
     andClauses.push({
       tags: {
@@ -243,6 +261,9 @@ function filterDemoProducts(params: ProductSearchParams): Product[] {
   const query = params.q?.trim().toLowerCase();
   const category = params.category?.trim().toLowerCase();
   const tags = params.tags?.map((tag) => tag.trim().toLowerCase()).filter(Boolean);
+  const providerNames = params.providerNames
+    ?.map((providerName) => providerName.trim().toLowerCase())
+    .filter(Boolean);
 
   return getDemoProducts()
     .filter((product) => {
@@ -257,13 +278,18 @@ function filterDemoProducts(params: ProductSearchParams): Product[] {
         category === undefined || product.category.toLowerCase() === category;
 
       const matchesPrice =
-        params.maxPrice === undefined || product.priceUsdc <= params.maxPrice;
+        (params.maxPrice === undefined || product.priceUsdc <= params.maxPrice) &&
+        (params.minPrice === undefined || product.priceUsdc >= params.minPrice);
+
+      const matchesProvider =
+        providerNames === undefined ||
+        providerNames.includes(product.providerName.trim().toLowerCase());
 
       const matchesTags =
         tags === undefined ||
         tags.every((tag) => product.tags.map((value) => value.toLowerCase()).includes(tag));
 
-      return matchesQuery && matchesCategory && matchesPrice && matchesTags;
+      return matchesQuery && matchesCategory && matchesPrice && matchesProvider && matchesTags;
     })
     .sort((left, right) => left.priceUsdc - right.priceUsdc || left.name.localeCompare(right.name));
 }

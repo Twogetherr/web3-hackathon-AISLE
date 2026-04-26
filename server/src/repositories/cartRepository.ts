@@ -161,3 +161,83 @@ export async function upsertCartItem(input: {
     return nextCart;
   }
 }
+
+/**
+ * Replaces all line items on a cart with a new snapshot list.
+ *
+ * @param input The cart id and replacement line items.
+ * @returns The cart with recomputed totals.
+ * @throws {Error} Throws when the database write fails.
+ */
+export async function replaceCartContents(input: {
+  cartId: string;
+  items: Array<{
+    productId: string;
+    quantity: number;
+    priceUsdc: number;
+    name: string;
+    imageUrl: string;
+  }>;
+}): Promise<Cart> {
+  try {
+    const prisma = getPrismaClient();
+
+    await prisma.cart.upsert({
+      where: { id: input.cartId },
+      create: { id: input.cartId },
+      update: {}
+    });
+
+    await prisma.cartItem.deleteMany({
+      where: { cartId: input.cartId }
+    });
+
+    for (const line of input.items) {
+      await prisma.cartItem.create({
+        data: {
+          cartId: input.cartId,
+          productId: line.productId,
+          quantity: line.quantity,
+          priceUsdc: line.priceUsdc,
+          name: line.name,
+          imageUrl: line.imageUrl
+        }
+      });
+    }
+
+    const updatedCart = await findCartById(input.cartId);
+
+    if (updatedCart === null) {
+      throw new Error("Cart replace completed without a retrievable cart.");
+    }
+
+    return updatedCart;
+  } catch (error) {
+    console.error("Cart replace falling back to in-memory store", {
+      requestId: "system",
+      reason: error instanceof Error ? error.message : String(error)
+    });
+
+    const nextCart: Cart = {
+      id: input.cartId,
+      items: input.items.map((line) => ({
+        productId: line.productId,
+        quantity: line.quantity,
+        priceUsdc: line.priceUsdc,
+        name: line.name,
+        imageUrl: line.imageUrl
+      })),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      totalUsdc: Number(
+        input.items
+          .reduce((sum, line) => sum + line.priceUsdc * line.quantity, 0)
+          .toFixed(2)
+      )
+    };
+
+    demoCartStore.set(input.cartId, nextCart);
+
+    return nextCart;
+  }
+}

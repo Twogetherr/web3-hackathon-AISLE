@@ -4,7 +4,21 @@ import type { Cart } from "../types/cart";
 import type { OrderConfirmation } from "../types/checkout";
 import type { Product } from "../types/product";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+/**
+ * When unset, use same-origin `/api/...` so Vite can proxy to the Express server in dev.
+ * A literal `undefined` string in the URL was breaking all API calls for anyone without `client/.env`.
+ */
+function resolveApiBaseUrl(): string {
+  const raw = import.meta.env.VITE_API_BASE_URL as string | undefined;
+
+  if (raw === undefined || String(raw).trim() === "") {
+    return "";
+  }
+
+  return String(raw).replace(/\/$/, "");
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -30,10 +44,26 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
  * @returns The recommendation result payload.
  * @throws {Error} Throws when the API returns a structured error.
  */
-export async function fetchRecommendations(prompt: string): Promise<RecommendResponseData> {
+export async function fetchRecommendations(
+  prompt: string,
+  options?: {
+    refreshGeneration?: number;
+    minPrice?: number;
+    maxPrice?: number;
+    providerNames?: string[];
+  }
+): Promise<RecommendResponseData> {
   return requestJson<RecommendResponseData>("/api/agent/recommend", {
     method: "POST",
-    body: JSON.stringify({ prompt })
+    body: JSON.stringify({
+      prompt,
+      ...(options?.minPrice !== undefined ? { minPrice: options.minPrice } : {}),
+      ...(options?.maxPrice !== undefined ? { maxPrice: options.maxPrice } : {}),
+      ...(options?.providerNames !== undefined ? { filters: { providerNames: options.providerNames } } : {}),
+      ...(options?.refreshGeneration !== undefined
+        ? { refreshGeneration: options.refreshGeneration }
+        : {})
+    })
   });
 }
 
@@ -71,6 +101,24 @@ export async function postCartItem(payload: {
   return requestJson<Cart>("/api/cart", {
     method: "POST",
     body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * Replaces the server cart with the given lines (used before checkout / buy now).
+ *
+ * @param cartId The session cart id.
+ * @param items Product lines with quantities.
+ * @returns The updated cart payload.
+ * @throws {Error} Throws when the API returns a structured error.
+ */
+export async function putCartReplace(
+  cartId: string,
+  items: Array<{ productId: string; quantity: number }>
+): Promise<Cart> {
+  return requestJson<Cart>(`/api/cart/${encodeURIComponent(cartId)}/replace`, {
+    method: "PUT",
+    body: JSON.stringify({ items })
   });
 }
 
